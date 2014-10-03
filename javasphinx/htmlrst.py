@@ -58,8 +58,10 @@ class Converter(object):
         else:
             return self._escape_inline(':%s:`%s`' % (role, s))
 
-    def _directive(self, directive, body=None):
-        header = '\n\n.. %s::\n\n' % (directive,)
+    def _directive(self, directive, arguments='', body=None):
+        if arguments:
+            arguments = ' ' + arguments
+        header = '\n\n.. %s::%s\n\n' % (directive, arguments)
 
         if body:
             return header + self._left_justify(body, 3) + '\n\n'
@@ -247,7 +249,7 @@ class Converter(object):
             return self._separate(self._process_children(node).strip())
 
         if node.name == 'pre':
-            return self._directive('parsed-literal', self._process_text(node))
+            return self._directive('code-block', 'guess', self._process_text(node))
 
         if node.name == 'a':
             if 'name' in node.attrs:
