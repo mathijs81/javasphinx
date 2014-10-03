@@ -37,6 +37,9 @@ class JavadocRestCompiler(object):
 
         doc = javalang.javadoc.parse(documented.documentation)
 
+        if 'hide' in doc.tags:
+            return None
+
         if doc.description:
             output.add(self.__html_to_rst(doc.description))
             output.clear()
@@ -80,6 +83,8 @@ class JavadocRestCompiler(object):
         formatter.output_declaration(declaration, signature)
 
         doc = self.__output_doc(declaration)
+        if not doc:
+            return None
 
         directive = util.Directive('java:type', signature.build())
         directive.add_content(doc)
@@ -99,6 +104,8 @@ class JavadocRestCompiler(object):
         signature.append(constant.name)
 
         doc = self.__output_doc(constant)
+        if not doc:
+            return None
 
         directive = util.Directive('java:field', signature.build())
         directive.add_content(doc)
@@ -119,6 +126,8 @@ class JavadocRestCompiler(object):
         signature.append(field.declarators[0].name)
 
         doc = self.__output_doc(field)
+        if not doc:
+            return None
 
         directive = util.Directive('java:field', signature.build())
         directive.add_content(doc)
@@ -149,6 +158,8 @@ class JavadocRestCompiler(object):
             formatter.output_list(formatter.output_exception, constructor.throws, signature, ', ')
 
         doc = self.__output_doc(constructor)
+        if not doc:
+            return None
 
         directive = util.Directive('java:constructor', signature.build())
         directive.add_content(doc)
@@ -182,6 +193,8 @@ class JavadocRestCompiler(object):
             formatter.output_list(formatter.output_exception, method.throws, signature, ', ')
 
         doc = self.__output_doc(method)
+        if not doc:
+            return None
 
         directive = util.Directive('java:method', signature.build())
         directive.add_content(doc)
@@ -206,6 +219,9 @@ class JavadocRestCompiler(object):
 
         # Add type-level documentation
         type_dir = self.compile_type(declaration)
+        if not type_dir:
+            return None
+
         if outer_type:
             type_dir.add_option('outertype', outer_type)
         document.add_object(type_dir)
@@ -216,44 +232,48 @@ class JavadocRestCompiler(object):
 
             document.add_heading('Enum Constants')
             for enum_constant in enum_constants:
-                if self.member_headers:
-                    document.add_heading(enum_constant.name, '^')
                 c = self.compile_enum_constant(name, enum_constant)
-                c.add_option('outertype', name)
-                document.add_object(c)
+                if c:
+                    if self.member_headers:
+                        document.add_heading(enum_constant.name, '^')
+                    c.add_option('outertype', name)
+                    document.add_object(c)
 
         fields = filter(self.filter, declaration.fields)
         if fields:
             document.add_heading('Fields', '-')
             fields.sort(key=lambda f: f.declarators[0].name)
             for field in fields:
-                if self.member_headers:
-                    document.add_heading(field.declarators[0].name, '^')
                 f = self.compile_field(field)
-                f.add_option('outertype', name)
-                document.add_object(f)
+                if f:
+                    if self.member_headers:
+                        document.add_heading(field.declarators[0].name, '^')
+                    f.add_option('outertype', name)
+                    document.add_object(f)
 
         constructors = filter(self.filter, declaration.constructors)
         if constructors:
             document.add_heading('Constructors', '-')
             constructors.sort(key=lambda c: c.name)
             for constructor in constructors:
-                if self.member_headers:
-                    document.add_heading(constructor.name, '^')
                 c = self.compile_constructor(constructor)
-                c.add_option('outertype', name)
-                document.add_object(c)
+                if c:
+                    if self.member_headers:
+                        document.add_heading(constructor.name, '^')
+                    c.add_option('outertype', name)
+                    document.add_object(c)
 
         methods = filter(self.filter, declaration.methods)
         if methods:
             document.add_heading('Methods', '-')
             methods.sort(key=lambda m: m.name)
             for method in methods:
-                if self.member_headers:
-                    document.add_heading(method.name, '^')
                 m = self.compile_method(method)
-                m.add_option('outertype', name)
-                document.add_object(m)
+                if m:
+                    if self.member_headers:
+                        document.add_heading(method.name, '^')
+                    m.add_option('outertype', name)
+                    document.add_object(m)
 
         return document
 
@@ -307,6 +327,7 @@ class JavadocRestCompiler(object):
         for package, name, declaration in type_declarations:
             full_name = package + '.' + name
             document = self.compile_type_document(import_block, package, name, declaration)
-            documents[full_name] = (package, name, document.build())
+            if document:
+                documents[full_name] = (package, name, document.build())
 
         return documents
